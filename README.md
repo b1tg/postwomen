@@ -1,5 +1,11 @@
 # postwomen
 
+
+# build
+git clone https://github.com/b1tg/postwomen.git
+cd postwomen
+cargo build
+
 # usage
 ```
 # GET
