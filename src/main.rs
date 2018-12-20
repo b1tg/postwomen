@@ -3,9 +3,6 @@ extern crate hyper_tls;
 extern crate pretty_env_logger;
 
 extern crate subprocess;
-// extern crate serde_json;
-
-// use serde_json::{Value, Error};
 
 use std::fs::File;
 use std::path::Path;
@@ -33,20 +30,9 @@ fn main() {
             return;
         }
     };
-  //  println!("option {}", method);
-
     let url = url.parse::<hyper::Uri>().unwrap();
-    if url.scheme_part().map(|s| s.as_ref())!=Some("http") {
-     //   println!("this example only works with 'http' URLS");
-        //return;
-
-    }
 
     if method == "post" {
-        println!("use post");
-        //return;
-        //let tt_url = "http://httpbin.org/post";
-        //let t_url = tt_url.parse::<hyper::Uri>().unwrap();
         rt::run(post_url(url));
     } else {
         rt::run(fetch_url(url));
@@ -56,15 +42,12 @@ fn main() {
 
 fn fetch_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
     let https = hyper_tls::HttpsConnector::new(4).unwrap();
-    //   let client = Client::new();
     let client = Client::builder()
         .build::<_, Body>(https);
 
     client.get(url)
         .and_then(|res| {
             println!("Response: {}", res.status());
-            println!("Headers: {:#?}", res.headers());
-
             res.into_body().for_each(|chunk| {
                 io::stdout().write_all(&chunk)
                     .map_err(|e| panic!("example expects stdout is open, error={}",e))
@@ -81,7 +64,6 @@ fn fetch_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
 
 fn post_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
     let https = hyper_tls::HttpsConnector::new(4).unwrap();
-    //   let client = Client::new();
     let client = Client::builder()
         .build::<_, Body>(https);
 
@@ -101,7 +83,6 @@ fn post_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
         hyper::header::HeaderValue::from_static("application/json")
     );
     
-
     client.request(req)
         .and_then(|res| {
             println!("Post: {}", res.status());
@@ -116,7 +97,6 @@ fn post_url(url: hyper::Uri) -> impl Future<Item=(), Error=()> {
         .map_err(|err| {
             eprintln!("Error {}", err);
         })
-
 }
 
  
