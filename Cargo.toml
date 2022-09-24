@@ -8,5 +8,5 @@ edition = "2018"
 hyper = { version = "0.14", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
 pretty_env_logger = "0.3.0"
-subprocess = "0.1.18"
+subprocess = "0.2.9"
 serde_json = "1.0"
