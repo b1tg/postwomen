@@ -1,35 +1,30 @@
-extern crate hyper;
-extern crate hyper_tls;
-extern crate pretty_env_logger;
-
-extern crate subprocess;
-
+use hyper::{Body, Client, Method, Request};
+use std::env::args;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
+use std::time::Duration;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-use hyper::rt::{self, Future, Stream};
-use hyper::{Body, Client, Method, Request};
-use std::env::args;
-use std::io::{self, Write};
-fn main() {
+#[tokio::main]
+async fn main() -> Result<()> {
     pretty_env_logger::init();
-
     let (method, url) = match (args().nth(1), args().nth(2)) {
         (Some(method), Some(url)) => (method, url),
         _ => {
             println!("Usage: ./postwomen <get|post|put|delete|..> <url>");
-            return;
+            return Ok(());
         }
     };
     let url = url.parse::<hyper::Uri>().unwrap();
-    rt::run(handle(method, url));
+    handle(method, url).await
 }
 
-fn handle(method: String, url: hyper::Uri) -> impl Future<Item = (), Error = ()> {
-    let https = hyper_tls::HttpsConnector::new(4).unwrap();
-    let client = Client::builder().build::<_, Body>(https);
-
+async fn handle(method: String, url: hyper::Uri) -> Result<()> {
+    let client = Client::builder()
+        .pool_idle_timeout(Duration::from_secs(30))
+        // .http2_only(true)
+        .build_http();
     let mut req: Request<_>;
     if method.as_str() == "post" || method.as_str() == "put" {
         subprocess::Exec::cmd("vim")
@@ -59,20 +54,10 @@ fn handle(method: String, url: hyper::Uri) -> impl Future<Item = (), Error = ()>
         hyper::header::CONTENT_TYPE,
         hyper::header::HeaderValue::from_static("application/json"),
     );
-    client
-        .request(req)
-        .and_then(|res| {
-            println!("status: {}", res.status());
-            res.into_body().for_each(|chunk| {
-                io::stdout()
-                    .write_all(&chunk)
-                    .map_err(|e| panic!("expect stdout is open. err: {}", e))
-            })
-        })
-        .map(|_| {
-            println!("\n\nDone.");
-        })
-        .map_err(|err| {
-            eprintln!("Error {}", err);
-        })
+    let res = client.request(req).await?;
+    println!("status: {}", res.status());
+    let body_bytes = hyper::body::to_bytes(res.into_body()).await?;
+    let body_str = String::from_utf8(body_bytes.to_vec()).unwrap();
+    println!("body: {}", body_str);
+    Ok(())
 }
